@@ -101,6 +101,10 @@ void cumulative_statistics(const char* id, SOCKET sock)
     int cnt = 0;
 	send(sock, "i", sizeof(char), 0);
     recv(sock, (char*)&cnt, sizeof(int), 0);
+	if (cnt == 0) {
+		printf("데이터가 없습니다.\n");
+		return;
+	}
 	userdat* data = (userdat*)malloc(sizeof(userdat) * cnt);
 	if (data == NULL)
 	{
@@ -141,6 +145,7 @@ void menu(userdat* data, const char* id, SOCKET sock)
 {
     while (1)
     {
+        system("cls");
         int op;
         printf("=======================================\n");
         printf("* 탄소 발자국 추적 프로그램 *\n");
@@ -212,6 +217,7 @@ void first_window(userdat* data, userinf* user, SOCKET sock)
 	int cnt = 0;
     while (1)
     {
+        system("cls");
         int op;
         printf("1) 로그인\n");
         printf("2) 회원가입\n");
