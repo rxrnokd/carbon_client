@@ -22,14 +22,14 @@ typedef struct {
     struct tm today;
 } userdat;
 
-void first_window(userdat* data, userinf* user);
+void first_window(userdat* data, userinf* user, SOCKET sock);
 
 int main() {
     WSADATA wsa;
     SOCKET sock;
     struct sockaddr_in server;
-    char message[1024], server_reply[1024];
-    int recv_size;
+	userinf user;
+	userdat data;
 
     WSAStartup(MAKEWORD(2, 2), &wsa);
 
@@ -41,25 +41,13 @@ int main() {
 
     connect(sock, (struct sockaddr*)&server, sizeof(server));
 
-    /*
-    while (1) {
-        printf("서버로 보낼 메시지: ");
-        fgets(message, sizeof(message), stdin);
-
-        send(sock, message, strlen(message), 0);
-
-        recv_size = recv(sock, server_reply, sizeof(server_reply) - 1, 0);
-        if (recv_size == SOCKET_ERROR) break;
-
-        server_reply[recv_size] = '\0';
-        printf("서버 응답: %s\n", server_reply);
-    }
-    */
+	first_window(&data, &user, sock);
 
     closesocket(sock);
     WSACleanup();
     return 0;
 }
+
 
 void carbon_emissions_warning(userdat* data)
 {
@@ -89,7 +77,7 @@ void Total_carbon_emissions(userdat* data)
     printf("총 배출량 %.2f + %.2f + %.2f = %.2f kg CO2\n", car_emission, elec_emission, disposable_emission, data->total);
 }
 
-void today_emmission(userdat* data, const char* id)
+void today_emmission(userdat* data, const char* id, SOCKET sock)
 {
     printf("----오늘의 탄소 발자국 입력----\n");
     printf("오늘 자동차 이동거리(km): ");
@@ -103,15 +91,26 @@ void today_emmission(userdat* data, const char* id)
     Total_carbon_emissions(data);
     printf("\n");
     carbon_emissions_warning(data);
-    today(&(data->today));
-    data_store(data, id);
+	send(sock, "a", sizeof(char), 0);
+	send(sock, (char*)data, sizeof(userdat), 0);
+	
 }
 
-void cumulative_statistics(const char* id)
+void cumulative_statistics(const char* id, SOCKET sock)
 {
-    int cnt;
-    userdat* data = Import_Data(id, &cnt);
-    if (data == NULL || cnt == 0) {
+    int cnt = 0;
+	send(sock, "i", sizeof(char), 0);
+    recv(sock, (char*)&cnt, sizeof(int), 0);
+	userdat* data = (userdat*)malloc(sizeof(userdat) * cnt);
+	if (data == NULL)
+	{
+		printf("메모리 할당 실패\n");
+		return;
+	}
+    recv(sock, (char*)data, sizeof(userdat)*cnt, 0);
+  
+    if (data == NULL) 
+    {
         printf("데이터를 불러올 수 없습니다.\n");
         return;
     }
@@ -138,7 +137,7 @@ void cumulative_statistics(const char* id)
     free(data);
 }
 
-void menu(userdat* data, const char* id)
+void menu(userdat* data, const char* id, SOCKET sock)
 {
     while (1)
     {
@@ -155,7 +154,7 @@ void menu(userdat* data, const char* id)
         printf("\n");
         if (op == 1)
         {
-            today_emmission(data, id);
+            today_emmission(data, id, sock);
             printf("\n");
             printf("엔터 키를 누르면 메인 메뉴로 돌아갑니다...\n");
 
@@ -169,7 +168,7 @@ void menu(userdat* data, const char* id)
         }
         else if (op == 2)
         {
-            cumulative_statistics(id);
+            cumulative_statistics(id, sock);
             printf("\n");
             printf("엔터 키를 누르면 메인 메뉴로 돌아갑니다...\n");
 
@@ -197,41 +196,20 @@ void login(userinf* user)
     scanf("%20s", user->password);
 }
 
-int login_process(userinf* user)
+void signin(userinf* user)
 {
-    userinf userdata;
-    FILE* fp = fopen("userdat.dat", "rb+");
-    if (fp == NULL)
-    {
-        return-1;
-    }
-    while (fread(&userdata, sizeof(userdata), 1, fp) == 1)
-    {
-        if (strcmp(userdata.id, user->id) == 0 && strcmp(userdata.password, user->password) == 0)
-        {
-            fclose(fp);
-            return 1;
-        }
-    }
-    fclose(fp);
-    return -1;
-}
-
-void signin()
-{
-    userinf user;
-    FILE* fp = fopen("userdat.dat", "ab+");
+   
     printf("새아이디: ");
-    scanf("%10s", user.id);
+    scanf("%10s", user->id);
     printf("새비밀번호: ");
-    scanf("%20s", user.password);
-    fwrite(&user, sizeof(userinf), 1, fp);
-    fclose(fp);
+    scanf("%20s", user->password);
+    
 }
 
 void first_window(userdat* data, userinf* user, SOCKET sock)
 {
     char sf;
+	int cnt = 0;
     while (1)
     {
         int op;
@@ -247,21 +225,26 @@ void first_window(userdat* data, userinf* user, SOCKET sock)
             login(user);
 
 			send(sock, "l", sizeof(char), 0);
+            send(sock, (char*)user, sizeof(userinf), 0);
 			recv(sock, &sf, sizeof(char), 0);
-            if (login_process(user) == 1)
+            if (sf == 's')
             {
                 printf("로그인 성공\n");
-                menu(data, user->id);
+				//recv(sock, (char*)cnt, sizeof(int), 0);
+				//recv(sock, (char*)data, sizeof(userdat)*cnt, 0);
+                menu(data, user->id, sock);
                 break;
             }
-            else if (login_process(user) == -1)
+            else if (sf == 'f')
             {
                 printf("로그인 실패\n");
             }
         }
         else if (op == 2)
         {
-            signin();
+            signin(user);
+            send(sock, "s", sizeof(char), 0);
+            send(sock, (char*)user, sizeof(userinf), 0);
             printf("\n");
             printf("엔터 키를 누르면 메인 메뉴로 돌아갑니다...\n");
 
