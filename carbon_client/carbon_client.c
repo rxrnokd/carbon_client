@@ -244,6 +244,15 @@ void first_window(userdat* data, userinf* user, SOCKET sock)
             else if (sf == 'f')
             {
                 printf("로그인 실패\n");
+                printf("\n");
+                printf("엔터 키를 누르면 메인 메뉴로 돌아갑니다...\n");
+
+                while (getchar() != '\n'); // 입력 버퍼 비우기
+
+                if (getchar() == '\n')
+                {
+                    continue;
+                }
             }
         }
         else if (op == 2)
