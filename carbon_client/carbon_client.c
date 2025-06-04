@@ -16,7 +16,10 @@ typedef struct {
 
 typedef struct {
     int car;
+    int bus;
+    int subway;
     int elec;
+    int egg;
     int disposable;
     double total;
     struct tm today;
@@ -55,10 +58,12 @@ void carbon_emissions_warning(userdat* data)
     if (data->total > 1000)
     {
         printf("경고: 탄소 배출량이 1000kg을 초과했습니다!\n");
+        printf("\n");
     }
     else if (data->total > 500)
     {
         printf("주의: 탄소 배출량이 500kg을 초과했습니다!\n");
+        printf("\n");
     }
 }
 
@@ -67,29 +72,109 @@ void Total_carbon_emissions(userdat* data)
     double car_emission = 0.2 * data->car;
     double elec_emission = 0.424 * data->elec;
     double disposable_emission = 0.1 * data->disposable;
+    double egg_emission = 0.3 * data->egg;
+    double bus_emission = 0.08 * data->bus;
+    double subway_emission = 0.04 * data->subway;
 
-    data->total = car_emission + elec_emission + disposable_emission;
+    data->total = car_emission + elec_emission + disposable_emission + egg_emission + bus_emission + subway_emission;
 
     printf("자동차: %d km x 0.2 = %.2f kg\n", data->car, car_emission);
+    printf("버스: %d km x 0.08 = %.2f kg\n", data->bus, bus_emission);
+    printf("지하철: %d km x 0.04 = %.2f kg\n", data->subway, subway_emission);
     printf("전기: %d kWh x 0.424 = %.2f kg\n", data->elec, elec_emission);
     printf("일회용품: %d 개 x 0.1 = %.2f kg\n", data->disposable, disposable_emission);
+    printf("계란: %d 개 x 0.3 = %.2f kg\n", data->egg, egg_emission);
     printf("\n");
-    printf("총 배출량 %.2f + %.2f + %.2f = %.2f kg CO2\n", car_emission, elec_emission, disposable_emission, data->total);
+    printf("오늘의 총 탄소 배출량: %.2f kg CO2\n", data->total);
 }
 
 void today_emmission(userdat* data, const char* id, SOCKET sock)
 {
+    int temp;
+    system("cls");
     printf("----오늘의 탄소 발자국 입력----\n");
-    printf("오늘 자동차 이동거리(km): ");
-    scanf_s("%d", &(data->car));
-    printf("오늘 전기 사용량(kWh): ");
-    scanf_s("%d", &(data->elec));
-    printf("오늘 일회용품 사용 개수: ");
-    scanf_s("%d", &(data->disposable));
+
+    do {
+        printf("오늘 자동차 이동거리(km): ");
+        if (scanf_s("%d", &temp) != 1) {
+            while (getchar() != '\n');
+            printf("잘못된 입력입니다. 숫자를 입력해주세요.\n");
+            continue;
+        }
+        if (temp < 0) {
+            printf("이동거리는 0 이상이어야 합니다.\n");
+        }
+    } while (temp < 0);
+    data->car = temp;
+
+    do {
+        printf("오늘 버스 이동거리(km): ");
+        if (scanf_s("%d", &temp) != 1) {
+            while (getchar() != '\n');
+            printf("잘못된 입력입니다. 숫자를 입력해주세요.\n");
+            continue;
+        }
+        if (temp < 0) {
+            printf("이동거리는 0 이상이어야 합니다.\n");
+        }
+    } while (temp < 0);
+    data->bus = temp;
+
+    do {
+        printf("오늘 지하철 이동거리(km): ");
+        if (scanf_s("%d", &temp) != 1) {
+            while (getchar() != '\n');
+            printf("잘못된 입력입니다. 숫자를 입력해주세요.\n");
+            continue;
+        }
+        if (temp < 0) {
+            printf("이동거리는 0 이상이어야 합니다.\n");
+        }
+    } while (temp < 0);
+    data->subway = temp;
+
+    do {
+        printf("오늘 전기 사용량(kWh): ");
+        if (scanf_s("%d", &temp) != 1) {
+            while (getchar() != '\n');
+            printf("잘못된 입력입니다. 숫자를 입력해주세요.\n");
+            continue;
+        }
+        if (temp < 0) {
+            printf("사용량은 0 이상이어야 합니다.\n");
+        }
+    } while (temp < 0);
+    data->elec = temp;
+
+    do {
+        printf("오늘 일회용품 사용 개수: ");
+        if (scanf_s("%d", &temp) != 1) {
+            while (getchar() != '\n');
+            printf("잘못된 입력입니다. 숫자를 입력해주세요.\n");
+            continue;
+        }
+        if (temp < 0) {
+            printf("개수는 0 이상이어야 합니다.\n");
+        }
+    } while (temp < 0);
+    data->disposable = temp;
+
+    do {
+        printf("오늘 계란 소비 개수: ");
+        if (scanf_s("%d", &temp) != 1) {
+            while (getchar() != '\n');
+            printf("잘못된 입력입니다. 숫자를 입력해주세요.\n");
+            continue;
+        }
+        if (temp < 0) {
+            printf("개수는 0 이상이어야 합니다.\n");
+        }
+    } while (temp < 0);
+    data->egg = temp;
+
     printf("\n");
     printf("입력 완료!\n");
     Total_carbon_emissions(data);
-    printf("\n");
     carbon_emissions_warning(data);
 	send(sock, "a", sizeof(char), 0);
 	send(sock, (char*)data, sizeof(userdat), 0);
@@ -98,6 +183,7 @@ void today_emmission(userdat* data, const char* id, SOCKET sock)
 
 void cumulative_statistics(const char* id, SOCKET sock)
 {
+    system("cls");
     int cnt = 0;
 	send(sock, "i", sizeof(char), 0);
     recv(sock, (char*)&cnt, sizeof(int), 0);
@@ -146,7 +232,7 @@ void menu(userdat* data, const char* id, SOCKET sock)
     while (1)
     {
         system("cls");
-        int op;
+        char op;
         printf("=======================================\n");
         printf("* 탄소 발자국 추적 프로그램 *\n");
         printf("=======================================\n");
@@ -154,10 +240,10 @@ void menu(userdat* data, const char* id, SOCKET sock)
         printf("2) 요약 보기\n");
         printf("3) 종료\n");
         printf("=======================================\n");
-        printf("선택할 메뉴 번호를 입력하세요 -> ");
-        scanf_s("%d", &op);
+        printf("선택할 메뉴 번호를 입력하세요");
+        op = _getch();
         printf("\n");
-        if (op == 1)
+        if (op == '1')
         {
             today_emmission(data, id, sock);
             printf("\n");
@@ -171,13 +257,13 @@ void menu(userdat* data, const char* id, SOCKET sock)
             }
 
         }
-        else if (op == 2)
+        else if (op == '2')
         {
             cumulative_statistics(id, sock);
             printf("\n");
             printf("엔터 키를 누르면 메인 메뉴로 돌아갑니다...\n");
 
-            while (getchar() != '\n'); // 입력 버퍼 비우기 
+            //while (getchar() != '\n'); // 입력 버퍼 비우기 
 
             if (getchar() == '\n')
             {
@@ -218,14 +304,14 @@ void first_window(userdat* data, userinf* user, SOCKET sock)
     while (1)
     {
         system("cls");
-        int op;
+        char op;
         printf("1) 로그인\n");
         printf("2) 회원가입\n");
         printf("3) 종료\n");
-        printf("->");
-        scanf("%d", &op);
+   
+        op = _getch();
         printf("\n");
-        if (op == 1)
+        if (op == '1')
         {
 
             login(user);
@@ -238,11 +324,14 @@ void first_window(userdat* data, userinf* user, SOCKET sock)
                 printf("로그인 성공\n");
 				//recv(sock, (char*)cnt, sizeof(int), 0);
 				//recv(sock, (char*)data, sizeof(userdat)*cnt, 0);
+                while (getchar() != '\n');
                 menu(data, user->id, sock);
                 break;
             }
             else if (sf == 'f')
             {
+				continue;
+                /*
                 printf("로그인 실패\n");
                 printf("\n");
                 printf("엔터 키를 누르면 메인 메뉴로 돌아갑니다...\n");
@@ -253,9 +342,10 @@ void first_window(userdat* data, userinf* user, SOCKET sock)
                 {
                     continue;
                 }
+                */
             }
         }
-        else if (op == 2)
+        else if (op == '2')
         {
             signin(user);
             send(sock, "s", sizeof(char), 0);
